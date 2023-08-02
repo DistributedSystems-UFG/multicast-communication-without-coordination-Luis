@@ -5,15 +5,16 @@ import random
 import time
 import pickle
 
-myAddresses = gethostbyname_ex(gethostname())
-handShakes = [] # not used; only if we need to check whose handshake is missing
+#myAddresses = gethostbyname_ex(gethostname()) # Does not work in EC2 for public address
+
+#handShakes = [] # not used; only if we need to check whose handshake is missing
 handShakeCount = 0
 sendSocket = socket(AF_INET, SOCK_DGRAM)
 
-i = 0
-while i < N:
-  handShakes.append(0)
-  i = i + 1 
+# i = 0
+# while i < N:
+#   handShakes.append(0)
+#   i = i + 1 
 
 class MsgHandler(threading.Thread):
   def __init__(self, sock):
@@ -23,7 +24,7 @@ class MsgHandler(threading.Thread):
   def run(self):
     print('Handler is ready. Waiting for the handshakes...')
     
-    global handShakes
+    #global handShakes
     global handShakeCount
     
     logList = []
@@ -32,12 +33,13 @@ class MsgHandler(threading.Thread):
     while handShakeCount < N:
       msgPack = self.sock.recv(1024)
       msg = pickle.loads(msgPack)
+      print ('########## unpickled msgPack: ', msg)
       if msg[0] == 'READY':
 
         # To do: send reply of handshake and wait for confirmation
 
         handShakeCount = handShakeCount + 1
-        handShakes[msg[1]] = 1
+        #handShakes[msg[1]] = 1
         print('--- Handshake received: ', msg[1])
 
     print('Secondary Thread: Received all handshakes. Entering the loop to receive messages.')
@@ -69,19 +71,24 @@ class MsgHandler(threading.Thread):
     
     return
 
-print('I am up, and my adddress is ', myAddresses[2])
+#print('I am up, and my adddress is ', myAddresses[2])
 
-#Find out who am I
-myself = 0
-for addr in PEERS:
-  if addr in myAddresses[2]:
-    break
-  myself = myself + 1
-print('I am process ', str(myself))
+#Find out who I am (but instead of finding it out via the IP address, use an nonce)
+# myself = 0
+# for addr in PEERS:
+#   if addr in myAddresses[2]:
+#     break
+#   myself = myself + 1
+# print('I am process ', str(myself))
+random.seed(time.clock_gettime_ns(time.CLOCK_MONOTONIC))
+myself = random.randint(0,1000)
+
+print('I am up, and my ID is: ', str(myself))
 
 #Create receive socket
 recvSocket = socket(AF_INET, SOCK_DGRAM)
-recvSocket.bind((myAddresses[2][0], PORT))
+#recvSocket.bind((myAddresses[2][0], PORT))
+recvSocket.bind(('0.0.0.0', PORT))
 
 # Wait for other processes to start
 # To Do: fix bug that causes a failure when not all processes are started within this time
@@ -116,6 +123,7 @@ for msgNumber in range(0, N_MSGS):
   msgPack = pickle.dumps(msg)
   for addrToSend in PEERS:
     sendSocket.sendto(msgPack, (addrToSend,PORT))
+    print('Sent message ' + str(msgNumber))
 
 # Tell all processes that I have no more messages to send
 for addrToSend in PEERS:
