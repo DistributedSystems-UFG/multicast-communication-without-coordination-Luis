@@ -3,8 +3,8 @@ import pickle
 from constMP import *
 
 serverSock = socket(AF_INET, SOCK_STREAM)
-serverSock.bind((SERVER_ADDR, SERVER_PORT))
-serverSock.listen(5)
+serverSock.bind(('0.0.0.0', SERVER_PORT))
+serverSock.listen(6)
 
 numMsgs = 0
 msgs = [] # each msg is a list of tuples (with the original messages received by the peer processes)
@@ -12,7 +12,7 @@ msgs = [] # each msg is a list of tuples (with the original messages received by
 # Receive the lists of messages from the peer processes
 while numMsgs < N:
 	(conn, addr) = serverSock.accept()
-	msgPack = conn.recv(2048)
+	msgPack = conn.recv(32768)
 	conn.close()
 	msgs.append(pickle.loads(msgPack))
 	numMsgs = numMsgs + 1
